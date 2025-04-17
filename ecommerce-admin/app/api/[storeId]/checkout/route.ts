@@ -39,6 +39,7 @@ export async function POST(
     const order = await prismadb.order.create({
       data: {
         storeId: params.storeId,
+        paymentId: `order_${Date.now()}`,
         isPaid: false,
         orderItems: {
           create: productIds.map((productId: string) => ({
@@ -58,7 +59,7 @@ export async function POST(
       currency: "INR",
       receipt: order.id,
     });
-
+    console.log(razorpayOrder);
     return NextResponse.json(razorpayOrder, {
       headers: corsHeaders
     });

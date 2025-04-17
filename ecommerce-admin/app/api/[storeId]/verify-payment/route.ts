@@ -35,7 +35,7 @@ export async function POST(
     // Update order status
     const order = await prismadb.order.update({
       where: {
-        id: razorpay_order_id,
+        paymentId: razorpay_order_id,
       },
       data: {
         isPaid: true,
