@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from 'razorpay';
 import prismadb from "@/lib/prismadb";
-import { auth } from "@clerk/nextjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,20 +22,20 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { userId } = auth();
     const { productIds, amount } = await req.json();
-    console.log(productIds, amount);
-    console.log(params.storeId);
-    console.log(userId);
-    if (!userId) {
-      return new NextResponse("Unauthenticated", { status: 401 });
-    }
-      console.log(productIds.length);
+
     if (!productIds || productIds.length === 0) {
       return new NextResponse("Product ids are required", { status: 400 });
     }
 
-    // Create order in database
+    const products = await prismadb.product.findMany({
+      where: {
+        id: {
+          in: productIds
+        }
+      }
+    });
+
     const order = await prismadb.order.create({
       data: {
         storeId: params.storeId,
@@ -45,14 +44,13 @@ export async function POST(
           create: productIds.map((productId: string) => ({
             product: {
               connect: {
-                id: productId,
-              },
-            },
-          })),
-        },
-      },
+                id: productId
+              }
+            }
+          }))
+        }
+      }
     });
-    console.log(order);
 
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
@@ -62,8 +60,9 @@ export async function POST(
     });
 
     return NextResponse.json(razorpayOrder, {
-      headers: corsHeaders,
+      headers: corsHeaders
     });
+    
   } catch (error) {
     console.log('[CHECKOUT_ERROR]', error);
     return new NextResponse("Internal error", { status: 500 });
